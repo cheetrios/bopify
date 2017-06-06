@@ -66,21 +66,7 @@
 
 
 			  		<div class="bottom-text">
-			  			<h1> Come bop with us. </h1>
-			  			<table class="table">
-			  				<tr>
-			  					<td>Name</td>
-			  					<td>Genre</td>
-			  					<td>Link</td>
-			  				</tr>
-			  				{% for session in sessions %}
-			  				<tr>
-			  					<td>{{ session.name }}</td>
-			  					<td>{{ session.genre }}</td>
-			  					<td><button type="button" class="btn btn-default">Join</button></td>
-			  				</tr>
-				  			{% endfor %}
-			  			</table>
+			  			<h1> Session songs. </h1>
 		  			</div>			  						  			   			
 
 			   	</div>
@@ -95,10 +81,13 @@
 	<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
 	  <div class="modal-dialog" role="document">
 	    <div class="modal-content">
-	    	<form>
+	      <form>
 	      	  {{ form.hidden_tag() }}
-		      <p> Session Name:  {{ form.session() }}<br> </p>
-		      <p> Session Genre: {{ form.genre() }}<br> </p>
+		      <p>
+		          Please enter your OpenID:<br>
+		          {{ form.openid(size=80) }}<br>
+		      </p>
+		      <p>{{ form.remember_me }} Remember Me</p>
 		      <p><input type="submit" value="Create"></p>
 			</form>
 	    </div>
