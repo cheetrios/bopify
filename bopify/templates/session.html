@@ -20,10 +20,10 @@
    <link rel="stylesheet" href="../static/css/base.css">  
    <link rel="stylesheet" href="../static/css/main.css">
    <link rel="stylesheet" href="../static/css/vendor.css">
+   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 
    <!-- script
    ================================================== -->
-	<script src="../static/js/modernizr.js"></script>
 </head>
 
 <body id="top">
@@ -34,17 +34,11 @@
 
    	<div class="row">
    		<div class="logo">
-	         <a href="index.html">Khronos</a>
-	      </div> 
+			 <a href="index.html">Khronos</a>
+		  </div> 
 
 			<div class="social-links">
-			   <ul>
-					<li><a href="#"><i class="fa fa-facebook"></i></a></li>
-					<li><a href="#"><i class="fa fa-twitter"></i></a></li>
-				   <li><a href="#"><i class="fa fa-pinterest"></i></a></li>				   
-				   <li><a href="#"><i class="fa fa-instagram"></i></a></li> 
-				   <li><a href="#"><i class="fa fa-dribbble"></i></a></li>				     			
-				</ul>
+			   <button type="button" class="btn btn-default" id="create" data-toggle="modal" data-target="#myModal">Create</button>
 			</div>
    	</div> 
 
@@ -69,30 +63,66 @@
 		   				</div> 
 		   			</div>
 
-			  			<div class="bottom-text">
-			  				<h1> Come bop with us. </h1>
 
-			  				<button type="button" class="btn btn-default col-md-6">Create</button>
-				  			<button type="button" class="btn btn-default col-md-6">Join</button> 				
-			  			</div>			  						  			   			
+
+			  		<div class="bottom-text">
+			  			<h1> Come bop with us. </h1>
+			  			<table class="table">
+			  				<tr>
+			  					<td>Name</td>
+			  					<td>Genre</td>
+			  					<td>Link</td>
+			  				</tr>
+			  				{% for session in sessions %}
+			  				<tr>
+			  					<td>{{ session.name }}</td>
+			  					<td>{{ session.genre }}</td>
+			  					<td><button type="button" class="btn btn-default">Join</button></td>
+			  				</tr>
+				  			{% endfor %}
+			  			</table>
+		  			</div>			  						  			   			
 
 			   	</div>
 			</div> <!-- /row -->  
-
 		</div> <!-- /main-content --> 
 		   
 	</div> <!-- /content-wrap -->
-   
+
    </section> <!-- /home -->
 
-   
+    <!-- Modal -->
+	<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+	  <div class="modal-dialog" role="document">
+	    <div class="modal-content">
+	      <form>
+			  <div class="form-group">
+			    <label for="name">Session Name</label>
+			    <input class="form-control" id="name" placeholder="Enter session name">
+			  </div>
 
-   </section> <!-- /info -->
+			  <div class="form-group">
+			    <label for="genre">Session Genre</label>
+			    <select class="form-control" id="genre">
+			      <option>Jazz</option>
+			      <option>Hip Hop</option>
+			      <option>Lame</option>
+			    </select>
+			  </div>
+			  <button type="submit" class="btn btn-primary">Submit</button>
+			</form>
+	    </div>
+	  </div>
+	</div>
+
+	</section> <!-- /info -->
    <!-- Java Script
    ================================================== --> 
    <script src="../static/js/jquery-2.1.3.min.js"></script>
    <script src="../static/js/plugins.js"></script>
    <script src="../static/js/main.js"></script>
+
+   	<script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 
 </body>
 

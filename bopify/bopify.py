@@ -27,7 +27,22 @@ def login():
 @app.route("/session/")
 def session():
 	cur = get_db().cursor()
-	return render_template("session.html")
+
+	sessions = [
+		{
+			"name"  : "Yash",
+			"genre" : "Hip Hop"
+		}, 
+		{
+			"name"  : "Peter",
+			"genre" : "Classical"
+		}, 
+		{
+			"name"  : "Erica",
+			"genre" : "Lame"
+		}, 
+	]
+	return render_template("session.html", sessions=sessions)
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', debug=True)
