@@ -17,6 +17,8 @@ DATABASE = "db/sessions.db"
 app = Flask(__name__)
 app.config.from_object('config')
 
+# ========================== DB Setup Functions ============================= #
+
 def get_db():
 	db = getattr(g, '_database', None)
 	if db is None:
@@ -24,11 +26,23 @@ def get_db():
 		db = g._database
 	return db
 
+def create_db(cur):
+	cur.execute("""CREATE TABLE sessions
+       (sessid  text, sessname text, sessgenre text, 
+    	masterid text, partid text)""")
+	cur.commit()
+
+def delete_db(cur):
+	cur.execute("DROP TABLE sessions")
+	cur.commit()
+
+# ========================== Flask Route Setup ============================== #
+
 @app.route("/")
 def login():
 	return render_template("index.html")
 
-@app.route("/bop/")
+@app.route("/bop/<sessid>/")
 def bop():
 	return render_template("bop.html")
 
@@ -37,12 +51,6 @@ def session():
 	cur = get_db()
 	c   = cur.cursor()
 	form = CreateForm()
-	
-	# cur.execute("""CREATE TABLE sessions
-    #   (sessid  text, sessname text, sessgenre text, 
-    #	masterid text, partid text)""")
-
-	# cur.execute("DROP TABLE sessions")
 
 	# case where the person just created a new session: creates a 
 	# new entry in DB and redirects them to the session page
@@ -60,7 +68,7 @@ def session():
 		c.execute("INSERT INTO sessions VALUES (?,?,?,?,?)", 
 			[session_id, session_name, session_genre, master_id, participant_id])
 		cur.commit()
-		return redirect("/bop/")
+		return redirect("/bop/{}/".format(session_id))
 
 	# case of hitting the page after logging in (did not click create)
 	else: 

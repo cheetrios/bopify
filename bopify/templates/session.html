@@ -6,7 +6,8 @@
 	</div>
 
 	<div class="social-links">
-	   <button type="button" class="btn btn-default" id="create" data-toggle="modal" data-target="#myModal">Create</button>
+	   <button type="button" class="btn btn-default" id="create" data-toggle="modal" data-target="#createModal">Create</button>
+	   <button type="button" class="btn btn-default" id="join" data-toggle="modal" data-target="#joinModal">Join</button>
 	</div>
 </div> 
 {% endblock %}
@@ -36,7 +37,7 @@
 			  				<tr>
 			  					<td>{{ session[1] }}</td>
 			  					<td>{{ session[2] }}</td>
-			  					<td><button type="button" class="btn btn-default">Join</button></td>
+			  					<td><button type="button" class="btn btn-default">Listen</button></td>
 			  				</tr>
 				  			{% endfor %}
 			  			</table>
@@ -50,7 +51,21 @@
 </section> <!-- /info -->
 
 <!-- Modal -->
-<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="createModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+	<div class="modal-content">
+		<form action="" method="post" name="create">
+	  	  {{ form.hidden_tag() }}
+		  <p> Session Name:  {{ form.session() }}<br> </p>
+		  <p> Session Genre: {{ form.genre() }}<br> </p>
+		  <p><input type="submit" value="Create"></p>
+		</form>
+	</div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="joinModal" tabindex="-1" role="dialog">
   <div class="modal-dialog" role="document">
 	<div class="modal-content">
 		<form action="" method="post" name="create">
