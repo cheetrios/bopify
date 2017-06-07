@@ -55,9 +55,9 @@
   <div class="modal-dialog" role="document">
 	<div class="modal-content">
 		<form action="" method="post" name="create">
-	  	  {{ form.hidden_tag() }}
-		  <p> Session Name:  {{ form.session() }}<br> </p>
-		  <p> Session Genre: {{ form.genre() }}<br> </p>
+	  	  {{ create.hidden_tag() }}
+		  <p> Session Name:  {{ create.session() }}<br> </p>
+		  <p> Session Genre: {{ create.genre() }}<br> </p>
 		  <p><input type="submit" value="Create"></p>
 		</form>
 	</div>
@@ -68,11 +68,14 @@
 <div class="modal fade" id="joinModal" tabindex="-1" role="dialog">
   <div class="modal-dialog" role="document">
 	<div class="modal-content">
-		<form action="" method="post" name="create">
-	  	  {{ form.hidden_tag() }}
-		  <p> Session Name:  {{ form.session() }}<br> </p>
-		  <p> Session Genre: {{ form.genre() }}<br> </p>
-		  <p><input type="submit" value="Create"></p>
+		<form action="" method="post" name="join">
+	  	  	{{ join.hidden_tag() }}
+	  	  	{% for session in joinable %}
+		  	  	<div class="radio">
+					<label><input type="radio" name="optradio">{{ session[2] }}</label>
+				</div>
+			{% endfor %}
+		  <p><input type="submit" value="Join"></p>
 		</form>
 	</div>
   </div>

@@ -58,7 +58,7 @@ def session():
 		# print(cur.execute("""SELECT * FROM sessions 
 		#	WHERE sessid = {}""".format(form.session.data)))
 
-		session_id     = str(uuid.uuid4())       # randomly generated bop session ID
+		session_id     = str(uuid.uuid4())  # randomly generated bop session ID
 		session_name   = form.session.data  # title given to session
 		session_genre  = form.genre.data    # metadata of bop session created
 
@@ -72,8 +72,10 @@ def session():
 
 	# case of hitting the page after logging in (did not click create)
 	else: 
-		sessions = c.execute("SELECT * FROM sessions").fetchall()
+		joinable = c.execute("""SELECT * FROM sessions""").fetchall()
+		sessions = c.execute("""SELECT * FROM sessions""").fetchall()
 		return render_template('session.html', 
+							   joinable=joinable,
 							   sessions=sessions,
 							   form=form)
 
