@@ -34,8 +34,8 @@
 			  				</tr>
 			  				{% for session in sessions %}
 			  				<tr>
-			  					<td>{{ session.name }}</td>
-			  					<td>{{ session.genre }}</td>
+			  					<td>{{ session[1] }}</td>
+			  					<td>{{ session[2] }}</td>
 			  					<td><button type="button" class="btn btn-default">Join</button></td>
 			  				</tr>
 				  			{% endfor %}

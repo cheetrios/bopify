@@ -12,10 +12,10 @@ type of music typically played and session title
 
 Organized as:
 
-| Session ID | Session Name | Master | Participants IDs | 
+| Session ID | Session Name | Master | Participants ID | 
 
 # Users
 The users DB contains each of the users, their associated metadata, and all
 of the sessions they are a part of.
 
-| User ID | Metadata | Session IDs |
+| User ID | Metadata | Session ID |
