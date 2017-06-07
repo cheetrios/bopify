@@ -10,7 +10,7 @@ import sqlite3
 from flask import Flask, render_template, request, redirect
 from flask import g
 
-from forms import CreateForm
+from forms import CreateForm, JoinForm
 
 DATABASE = "db/sessions.db"
 
@@ -43,24 +43,26 @@ def login():
 	return render_template("index.html")
 
 @app.route("/bop/<sessid>/")
-def bop():
+def bop(sessid):
 	return render_template("bop.html")
 
 @app.route("/session/", methods=["GET", "POST"])
 def session():
 	cur = get_db()
 	c   = cur.cursor()
-	form = CreateForm()
+	
+	create = CreateForm()
+	join   = JoinForm()
 
 	# case where the person just created a new session: creates a 
 	# new entry in DB and redirects them to the session page
-	if form.validate_on_submit():
+	if create.validate_on_submit():
 		# print(cur.execute("""SELECT * FROM sessions 
 		#	WHERE sessid = {}""".format(form.session.data)))
 
 		session_id     = str(uuid.uuid4())  # randomly generated bop session ID
-		session_name   = form.session.data  # title given to session
-		session_genre  = form.genre.data    # metadata of bop session created
+		session_name   = create.session.data  # title given to session
+		session_genre  = create.genre.data    # metadata of bop session created
 
 		master_id      = str(uuid.uuid4()) # ID of master: starts as creator
 		participant_id = master_id    # ID of anyone joining: creator automatically in
@@ -77,7 +79,7 @@ def session():
 		return render_template('session.html', 
 							   joinable=joinable,
 							   sessions=sessions,
-							   form=form)
+							   create=create, join=join)
 
 if __name__ == "__main__":
 	app.run(host='0.0.0.0', debug=True)
