@@ -10,5 +10,5 @@ from wtforms import StringField
 from wtforms.validators import DataRequired
 
 class CreateForm(Form):
-    session = StringField('session', validators=[DataRequired()])
+    session = StringField('session')
     genre   = StringField('genre')
