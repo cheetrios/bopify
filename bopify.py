@@ -93,42 +93,72 @@ def spotify_authorized():
 def room(sessid):
 	return render_template("bop.html")
 
+def join_session(cur, session_id, session_name, session_genre, 
+	master_id, participant_id):
+	"""Helper function used for joining a room. Automatically redirects to the
+	page where all joined rooms are listed
+
+	Args:
+	cur           (SQLite cursor): pointer into sessions DB
+	session_id    (str): randomly generated bop session ID
+	session_name  (str): title given to session
+	session_genre (str): metadata of bop session created
+
+	master_id     (str): ID of master of the session
+	participant_id(str): ID of the joining member
+
+	Returns:
+	bool: Redirection to bop page (listing joined sessions)
+	"""
+
+	cur.cursor().execute("INSERT INTO sessions VALUES (?,?,?,?,?)", 
+		[session_id, session_name, session_genre, master_id, participant_id])
+	cur.commit()
+	return redirect("/bop/")
+
 @app.route("/bop/", methods=["GET", "POST"])
 def bop():
-	print(session['user_id'])
-
+	# DB Columns: sessid | sessname | sessgenre | masterid | partid |
 	cur = get_db()
 	c   = cur.cursor()
 	
+	# sessions the user is already a part of: do NOT display on "join" list
+	sessions = c.execute("""SELECT * FROM sessions WHERE partid=?""",
+		(session['user_id'],)).fetchall()
+	session_ids = [session[0] for session in sessions]
+
+	full = c.execute("""SELECT * FROM sessions""").fetchall()
+	joinable = [session for session in full if session[0] not in session_ids]
+
 	create = CreateForm()
 	join   = JoinForm()
-
+	join.session.choices = [(session[0], session[1]) for session in joinable]
+	
 	# case where the person just created a new session: creates a 
 	# new entry in DB and redirects them to the session page
-	if create.validate_on_submit():
-		# print(cur.execute("""SELECT * FROM sessions 
-		#	WHERE sessid = {}""".format(form.session.data)))
+	if create.validate_on_submit() and create.create.data:
+		return join_session(cur=cur, 
+					session_id=str(uuid.uuid4()), 
+					session_name=create.session.data, 
+					session_genre=create.genre.data, 
+					master_id=session['user_id'], 
+					participant_id=session['user_id'])
 
-		session_id	 = str(uuid.uuid4())  # randomly generated bop session ID
-		session_name   = create.session.data  # title given to session
-		session_genre  = create.genre.data	# metadata of bop session created
-
-		master_id	  = str(uuid.uuid4()) # ID of master: starts as creator
-		participant_id = master_id	# ID of anyone joining: creator automatically in
-
-		c.execute("INSERT INTO sessions VALUES (?,?,?,?,?)", 
-			[session_id, session_name, session_genre, master_id, participant_id])
-		cur.commit()
-		return redirect("/bop/{}/".format(session_id))
+	elif join.validate_on_submit():
+		reference = c.execute("""SELECT * FROM sessions WHERE sessid=?""",
+			(join.session.data,)).fetchone()
+		return join_session(cur=cur, 
+					session_id=reference[0], 
+					session_name=reference[1], 
+					session_genre=reference[2], 
+					master_id=reference[3], 
+					participant_id=session['user_id'])
 
 	# case of hitting the page after logging in (did not click create)
-	else: 
-		joinable = c.execute("""SELECT * FROM sessions""").fetchall()
-		sessions = c.execute("""SELECT * FROM sessions""").fetchall()
-		return render_template("session.html", 
-							   joinable=joinable,
-							   sessions=sessions,
-							   create=create, join=join)
+	return render_template("session.html", 
+							joinable=joinable,
+							sessions=sessions,
+							create=create, join=join)
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", debug=True)

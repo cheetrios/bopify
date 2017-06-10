@@ -6,12 +6,14 @@ events from forms on the pages
 """
 
 from flask_wtf import Form
-from wtforms import StringField
+from wtforms import StringField, SubmitField, RadioField
 from wtforms.validators import DataRequired
 
 class CreateForm(Form):
     session = StringField('session')
     genre   = StringField('genre')
+    create  = SubmitField('create')
 
 class JoinForm(Form):
-    session = StringField('session')
+    session = RadioField('session')
+    join    = SubmitField('join')

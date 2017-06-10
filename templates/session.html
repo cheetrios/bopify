@@ -58,7 +58,7 @@
 	  	  {{ create.hidden_tag() }}
 		  <p> Session Name:  {{ create.session() }}<br> </p>
 		  <p> Session Genre: {{ create.genre() }}<br> </p>
-		  <p><input type="submit" value="Create"></p>
+		  <p> {{ create.create() }} </p>
 		</form>
 	</div>
   </div>
@@ -70,12 +70,8 @@
 	<div class="modal-content">
 		<form action="" method="post" name="join">
 	  	  	{{ join.hidden_tag() }}
-	  	  	{% for session in joinable %}
-		  	  	<div class="radio">
-					<label><input type="radio" name="optradio">{{ session[2] }}</label>
-				</div>
-			{% endfor %}
-		  <p><input type="submit" value="Join"></p>
+	  	  	<p> {{ join.session() }} </p>
+		  	<p> {{ join.join() }} </p>
 		</form>
 	</div>
   </div>
