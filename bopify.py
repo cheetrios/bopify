@@ -18,7 +18,7 @@ from forms import CreateForm, JoinForm
 
 DATABASE = "db/sessions.db"
 
-SPOTIFY_APP_ID	 = "d251ae2dd5824052874019013ee73eb0"
+SPOTIFY_APP_ID	   = "d251ae2dd5824052874019013ee73eb0"
 SPOTIFY_APP_SECRET = "ee5c56305aea428b986c4a0964361cb2"
 
 app = Flask(__name__)
@@ -81,14 +81,12 @@ def join_session(cur, session_id, session_name, session_genre,
 	master_id     (str): ID of master of the session
 	participant_id(str): ID of the joining member
 
-	Returns:
-	bool: Redirection to bop page (listing joined sessions)
+	Returns: Void
 	"""
 
 	cur.cursor().execute("INSERT INTO sessions VALUES (?,?,?,?,?)", 
 		[session_id, session_name, session_genre, master_id, participant_id])
 	cur.commit()
-	return redirect("/bop/")
 
 # ========================== Flask Route Setup ============================== #
 
@@ -135,22 +133,25 @@ def bop():
 	# case where the person just created a new session: creates a 
 	# new entry in DB and redirects them to the session page
 	if create.validate_on_submit() and create.create.data:
-		return join_session(cur=cur, 
-					session_id=str(uuid.uuid4()), 
+		session_id = str(uuid.uuid4())
+		join_session(cur=cur, 
+					session_id=session_id, 
 					session_name=create.session.data, 
 					session_genre=create.genre.data, 
 					master_id=session['user_id'], 
 					participant_id=session['user_id'])
+		return redirect(url_for("room", sessid=session_id))
 
 	elif join.validate_on_submit():
 		reference = c.execute("""SELECT * FROM sessions WHERE sessid=?""",
 			(join.session.data,)).fetchone()
-		return join_session(cur=cur, 
+		join_session(cur=cur, 
 					session_id=reference[0], 
 					session_name=reference[1], 
 					session_genre=reference[2], 
 					master_id=reference[3], 
 					participant_id=session['user_id'])
+		return redirect("/bop/")
 
 	# case of hitting the page after logging in (did not click create)
 	return render_template("session.html", 
@@ -158,9 +159,9 @@ def bop():
 							sessions=sessions,
 							create=create, join=join)
 
-@app.route("/room/")
-def room():
-	return render_template("bop.html")
+@app.route("/room/<sessid>/")
+def room(sessid):
+	return render_template("room.html")
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", debug=True)
