@@ -65,33 +65,7 @@ def delete_db(cur):
 	cur.execute("DROP TABLE sessions")
 	cur.commit()
 
-# ========================== Flask Route Setup ============================== #
-
-@app.route("/")
-def index():
-	return redirect(url_for("login"))
-	#return render_template("index.html")
-
-@app.route("/login/")
-def login():
-	callback = url_for(
-		"spotify_authorized",
-		next=request.args.get("next") or request.referrer or None,
-		_external=True
-	)
-	return spotify.authorize(callback=callback)
-
-@app.route("/login/authorized/")
-def spotify_authorized():
-	resp = spotify.authorized_response()
-
-	# used to confirm that a user has logged in (for finding sessions)
-	session['user_id'] = spotify.consumer_secret
-	return redirect(url_for("bop"))
-
-@app.route("/room/<sessid>/")
-def room(sessid):
-	return render_template("bop.html")
+# ========================== Helper Functions =============================== #
 
 def join_session(cur, session_id, session_name, session_genre, 
 	master_id, participant_id):
@@ -115,6 +89,30 @@ def join_session(cur, session_id, session_name, session_genre,
 		[session_id, session_name, session_genre, master_id, participant_id])
 	cur.commit()
 	return redirect("/bop/")
+
+# ========================== Flask Route Setup ============================== #
+
+@app.route("/")
+def index():
+	return redirect(url_for("login"))
+	#return render_template("index.html")
+
+@app.route("/login/")
+def login():
+	callback = url_for(
+		"spotify_authorized",
+		next=request.args.get("next") or request.referrer or None,
+		_external=True
+	)
+	return spotify.authorize(callback=callback)
+
+@app.route("/login/authorized/")
+def spotify_authorized():
+	resp = spotify.authorized_response()
+
+	# used to confirm that a user has logged in (for finding sessions)
+	session['user_id'] = spotify.consumer_secret
+	return redirect(url_for("bop"))
 
 @app.route("/bop/", methods=["GET", "POST"])
 def bop():
@@ -159,6 +157,10 @@ def bop():
 							joinable=joinable,
 							sessions=sessions,
 							create=create, join=join)
+
+@app.route("/room/")
+def room():
+	return render_template("bop.html")
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", debug=True)
