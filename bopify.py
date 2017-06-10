@@ -67,7 +67,7 @@ def delete_db(cur):
 
 # ========================== Flask Route Setup ============================== #
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
 	return redirect(url_for("login"))
 	#return render_template("index.html")
@@ -84,14 +84,19 @@ def login():
 @app.route("/login/authorized/")
 def spotify_authorized():
 	resp = spotify.authorized_response()
-	return redirect(url_for("session"))
 
-@app.route("/bop/<sessid>/")
-def bop(sessid):
+	# used to confirm that a user has logged in (for finding sessions)
+	session['user_id'] = spotify.consumer_secret
+	return redirect(url_for("bop"))
+
+@app.route("/room/<sessid>/")
+def room(sessid):
 	return render_template("bop.html")
 
-@app.route("/session/", methods=["GET", "POST"])
-def session():
+@app.route("/bop/", methods=["GET", "POST"])
+def bop():
+	print(session['user_id'])
+
 	cur = get_db()
 	c   = cur.cursor()
 	
