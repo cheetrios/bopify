@@ -7,20 +7,49 @@ __description__ = Main application file for deployment
 import uuid
 import sqlite3
 
-from flask import Flask, render_template, request, redirect
+import spotipy
+import spotipy.util as util
+
+from flask import Flask, render_template, request, redirect, url_for, session
+from flask_oauthlib.client import OAuth, OAuthException
 from flask import g
 
 from forms import CreateForm, JoinForm
 
 DATABASE = "db/sessions.db"
 
+SPOTIFY_APP_ID	 = "d251ae2dd5824052874019013ee73eb0"
+SPOTIFY_APP_SECRET = "ee5c56305aea428b986c4a0964361cb2"
+
 app = Flask(__name__)
-app.config.from_object('config')
+app.config.from_object("config")
+
+oauth = OAuth(app)
+
+# ========================== Spotify Authenticate ============================ #
+
+spotify = oauth.remote_app(
+	"spotify",
+	consumer_key=SPOTIFY_APP_ID,
+	consumer_secret=SPOTIFY_APP_SECRET,
+	# Change the scope to match whatever it us you need
+	# list of scopes can be found in the url below
+	# https://developer.spotify.com/web-api/using-scopes/
+	request_token_params={"scope": "user-read-email"},
+	base_url="https://accounts.spotify.com",
+	request_token_url=None,
+	access_token_url="/api/token",
+	authorize_url="https://accounts.spotify.com/authorize"
+)
+
+@spotify.tokengetter
+def get_spotify_oauth_token():
+	return session.get("oauth_token")
 
 # ========================== DB Setup Functions ============================= #
 
 def get_db():
-	db = getattr(g, '_database', None)
+	db = getattr(g, "_database", None)
 	if db is None:
 		g._database = sqlite3.connect(DATABASE)
 		db = g._database
@@ -28,8 +57,8 @@ def get_db():
 
 def create_db(cur):
 	cur.execute("""CREATE TABLE sessions
-       (sessid  text, sessname text, sessgenre text, 
-    	masterid text, partid text)""")
+	   (sessid  text, sessname text, sessgenre text, 
+		masterid text, partid text)""")
 	cur.commit()
 
 def delete_db(cur):
@@ -38,9 +67,24 @@ def delete_db(cur):
 
 # ========================== Flask Route Setup ============================== #
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
+def index():
+	return redirect(url_for("login"))
+	#return render_template("index.html")
+
+@app.route("/login/")
 def login():
-	return render_template("index.html")
+	callback = url_for(
+		"spotify_authorized",
+		next=request.args.get("next") or request.referrer or None,
+		_external=True
+	)
+	return spotify.authorize(callback=callback)
+
+@app.route("/login/authorized/")
+def spotify_authorized():
+	resp = spotify.authorized_response()
+	return redirect(url_for("session"))
 
 @app.route("/bop/<sessid>/")
 def bop(sessid):
@@ -60,12 +104,12 @@ def session():
 		# print(cur.execute("""SELECT * FROM sessions 
 		#	WHERE sessid = {}""".format(form.session.data)))
 
-		session_id     = str(uuid.uuid4())  # randomly generated bop session ID
+		session_id	 = str(uuid.uuid4())  # randomly generated bop session ID
 		session_name   = create.session.data  # title given to session
-		session_genre  = create.genre.data    # metadata of bop session created
+		session_genre  = create.genre.data	# metadata of bop session created
 
-		master_id      = str(uuid.uuid4()) # ID of master: starts as creator
-		participant_id = master_id    # ID of anyone joining: creator automatically in
+		master_id	  = str(uuid.uuid4()) # ID of master: starts as creator
+		participant_id = master_id	# ID of anyone joining: creator automatically in
 
 		c.execute("INSERT INTO sessions VALUES (?,?,?,?,?)", 
 			[session_id, session_name, session_genre, master_id, participant_id])
@@ -76,10 +120,10 @@ def session():
 	else: 
 		joinable = c.execute("""SELECT * FROM sessions""").fetchall()
 		sessions = c.execute("""SELECT * FROM sessions""").fetchall()
-		return render_template('session.html', 
+		return render_template("session.html", 
 							   joinable=joinable,
 							   sessions=sessions,
 							   create=create, join=join)
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', debug=True)
+	app.run(host="0.0.0.0", debug=True)
