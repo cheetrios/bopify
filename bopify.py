@@ -59,11 +59,7 @@ def get_db(db_fname):
 
 	Returns: SQLite cursor object to DB specified
 	"""
-	db = getattr(g, "_database", None)
-	if db is None:
-		g._database = sqlite3.connect(db_fname)
-		db = g._database
-	return db
+	return sqlite3.connect(db_fname)
 
 def create_sess_db(cur):
 	"""Helper function used for setting up the sessions DB 
@@ -214,21 +210,39 @@ def bop():
 
 @app.route("/room/<sessid>/", methods=["GET", "POST"])
 def room(sessid):
-	# | sessid | songid | position
-	cur = get_db(SONG_DB)
+	# determines whether or not current user is master
+	sess_cur = get_db(SESS_DB) # | sessid | sessname | sessgenre | masterid | partid |
+	reference = sess_cur.cursor().execute(
+		"""SELECT * FROM sessions WHERE sessid=?""", (sessid,)).fetchone()
+	is_master = (reference is None or reference[3] == session["user_id"]) 
+	
+	song_cur = get_db(SONG_DB) # | sessid | songid | position
+	songs = song_cur.cursor().execute(
+		"""SELECT * FROM songs WHERE sessid=?""", (sessid,)).fetchall()
 	
 	search = SearchForm()
 	client_credentials_manager = SpotifyClientCredentials()
 	sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
-	songs = []
+	queried = []
 	if search.validate_on_submit():
 		query = search.query.data
-		songs = sp.search(q=query)["tracks"]["items"]
-	
+		queried = sp.search(q=query)["tracks"]["items"]
+		
 	return render_template("room.html",
 							search=search,
-							songs=songs)
+							is_master=is_master,
+							sessid=sessid,
+							songs=songs,
+							queried=queried)
+
+@app.route("/room/<sessid>/<songid>/")
+def queue(sessid, songid):
+	cur = get_db(SONG_DB)
+	cur.cursor().execute("INSERT INTO songs VALUES (?,?,?)", 
+		[sessid, songid, 0])
+	cur.commit()
+	return redirect(url_for("room", sessid=sessid))
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", debug=True)

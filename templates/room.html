@@ -23,9 +23,17 @@
 					  			   			
 		  			<div class="bottom-text">
 			  			<h1> Session songs. </h1>
+			  			<table class="table">
+							{% for song in songs %}
+							<tr>
+								<td>{{ song[2] }}</td>
+								<td>{{ song[1] }}</td>
+							</tr>
+							{% endfor %}
+			  			</table>
+
 			  			<form method = "post">
 				  			<input type="submit" name="submit" value="Sync">
-				  			<input type="submit" name="submit" value="Propose">
 				  		</form>
 
 				  		<form action="" method="post" name="search">
@@ -34,11 +42,19 @@
 						  <p> {{ search.search() }} </p>
 						</form>
 
-						{% for song in songs %}
-							{{ song["name"] }}   <br>
-							{{ song["id"] }}
-							<hr>
-						{% endfor %}
+						<table class="table">
+							{% for song in queried %}
+							<tr>	
+								<td>{{ song["name"] }}</td>
+								<td><a class="btn btn-default" 
+									href="{{ url_for('queue', sessid=sessid, songid=song['id']) }}">Queue</button>
+								</td>
+							</tr>
+							{% endfor %}
+			  			</table>
+
+						<ul>
+						</ul>
 			  		</div>
 			   	</div>
 			</div> <!-- /row -->  
