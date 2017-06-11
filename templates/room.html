@@ -47,7 +47,7 @@
 							<tr>	
 								<td>{{ song["name"] }}</td>
 								<td><a class="btn btn-default" 
-									href="{{ url_for('queue', sessid=sessid, songid=song['id']) }}">Queue</button>
+									href="{{ url_for('queue', sessid=sessid, songid=song['id'], songname=song['name']) }}">Queue</button>
 								</td>
 							</tr>
 							{% endfor %}

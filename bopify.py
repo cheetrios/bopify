@@ -49,18 +49,6 @@ def get_spotify_oauth_token():
 	return session.get("oauth_token")
 
 # ========================== DB Setup Functions ============================= #
-
-def get_db(db_fname):
-	"""Helper function used for getting DB cursor object given the filename
-	of where the SQLite file is saved
-
-	Args:
-	db_fname (str): filename of which DB the target cursor will point into
-
-	Returns: SQLite cursor object to DB specified
-	"""
-	return sqlite3.connect(db_fname)
-
 def create_sess_db(cur):
 	"""Helper function used for setting up the sessions DB 
 	given a cursor into the DB. DB is setup per:
@@ -92,7 +80,7 @@ def create_song_db(cur):
 	"""Helper function used for setting up the songs DB (for sessions->song
 	mapping lookups) given a cursor into the DB. DB is setup per:
 
-	| Session ID | Song ID (Spotify) | Position |
+	| Session ID | Song ID (Spotify) | Song Name | Order |
 
 	Args:
 	cur		   (SQLite cursor): pointer into songs DB
@@ -100,7 +88,7 @@ def create_song_db(cur):
 	Returns: Void
 	"""
 	cur.execute("""CREATE TABLE songs
-	   (sessid text, songid text, position real)""")
+	   (sessid text, songid text, songname text, position real)""")
 	cur.commit()
 
 def delete_song_db(cur):
@@ -164,7 +152,7 @@ def spotify_authorized():
 @app.route("/bop/", methods=["GET", "POST"])
 def bop():
 	# DB Columns: sessid | sessname | sessgenre | masterid | partid |
-	cur = get_db(SESS_DB)
+	cur = sqlite3.connect(SESS_DB)
 	c   = cur.cursor()
 	
 	# sessions the user is already a part of: do NOT display on "join" list
@@ -211,12 +199,12 @@ def bop():
 @app.route("/room/<sessid>/", methods=["GET", "POST"])
 def room(sessid):
 	# determines whether or not current user is master
-	sess_cur = get_db(SESS_DB) # | sessid | sessname | sessgenre | masterid | partid |
+	sess_cur = sqlite3.connect(SESS_DB) # | sessid | sessname | sessgenre | masterid | partid |
 	reference = sess_cur.cursor().execute(
 		"""SELECT * FROM sessions WHERE sessid=?""", (sessid,)).fetchone()
 	is_master = (reference is None or reference[3] == session["user_id"]) 
 	
-	song_cur = get_db(SONG_DB) # | sessid | songid | position
+	song_cur = sqlite3.connect(SONG_DB) # | sessid | songid | songname | position
 	songs = song_cur.cursor().execute(
 		"""SELECT * FROM songs WHERE sessid=?""", (sessid,)).fetchall()
 	
@@ -236,11 +224,11 @@ def room(sessid):
 							songs=songs,
 							queried=queried)
 
-@app.route("/room/<sessid>/<songid>/")
-def queue(sessid, songid):
-	cur = get_db(SONG_DB)
-	cur.cursor().execute("INSERT INTO songs VALUES (?,?,?)", 
-		[sessid, songid, 0])
+@app.route("/room/<sessid>/<songid>/<songname>/")
+def queue(sessid, songid, songname):
+	cur = sqlite3.connect(SONG_DB)
+	cur.cursor().execute("INSERT INTO songs VALUES (?,?,?,?)", 
+		[sessid, songid, songname, 0])
 	cur.commit()
 	return redirect(url_for("room", sessid=sessid))
 

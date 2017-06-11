@@ -18,4 +18,4 @@ Organized as:
 The song DB contains each of the session, simply being the list of songs
 associated with a given room and ordering metadata.
 
-| Session ID | Song ID (Spotify) | Order |
+| Session ID | Song ID (Spotify) | Song Name |Order |
