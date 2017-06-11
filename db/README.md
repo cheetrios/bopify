@@ -14,8 +14,8 @@ Organized as:
 
 | Session ID | Session Name | Master | Participants ID | 
 
-# Users
-The users DB contains each of the users, their associated metadata, and all
-of the sessions they are a part of.
+# Songs
+The song DB contains each of the session, simply being the list of songs
+associated with a given room and ordering metadata.
 
-| User ID | Metadata | Session ID |
+| Session ID | Song ID (Spotify) | Order |

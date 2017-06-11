@@ -38,7 +38,7 @@
 			  					<td>{{ session[1] }}</td>
 			  					<td>{{ session[2] }}</td>
 				  				<td>
-				  					<a class="btn btn-default" href="{{ session[0] }}">Listen</button>
+				  					<a class="btn btn-default" href="{{ url_for("room", sessid=session[0]) }}">Listen</button>
 				  				</td>
 			  				</tr>
 				  			{% endfor %}

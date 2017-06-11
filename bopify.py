@@ -9,14 +9,16 @@ import sqlite3
 
 import spotipy
 import spotipy.util as util
+from spotipy.oauth2 import SpotifyClientCredentials
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_oauthlib.client import OAuth, OAuthException
 from flask import g
 
-from forms import CreateForm, JoinForm
+from forms import CreateForm, JoinForm, SearchForm
 
-DATABASE = "db/sessions.db"
+SESS_DB = "db/sessions.db"
+SONG_DB = "db/song.db"
 
 SPOTIFY_APP_ID	   = "d251ae2dd5824052874019013ee73eb0"
 SPOTIFY_APP_SECRET = "ee5c56305aea428b986c4a0964361cb2"
@@ -48,21 +50,72 @@ def get_spotify_oauth_token():
 
 # ========================== DB Setup Functions ============================= #
 
-def get_db():
+def get_db(db_fname):
+	"""Helper function used for getting DB cursor object given the filename
+	of where the SQLite file is saved
+
+	Args:
+	db_fname (str): filename of which DB the target cursor will point into
+
+	Returns: SQLite cursor object to DB specified
+	"""
 	db = getattr(g, "_database", None)
 	if db is None:
-		g._database = sqlite3.connect(DATABASE)
+		g._database = sqlite3.connect(db_fname)
 		db = g._database
 	return db
 
-def create_db(cur):
+def create_sess_db(cur):
+	"""Helper function used for setting up the sessions DB 
+	given a cursor into the DB. DB is setup per:
+
+	| Session ID | Session Name | Master | Participants ID | 
+
+	Args:
+	cur		   (SQLite cursor): pointer into sessions DB
+
+	Returns: Void
+	"""
 	cur.execute("""CREATE TABLE sessions
 	   (sessid  text, sessname text, sessgenre text, 
 		masterid text, partid text)""")
 	cur.commit()
 
-def delete_db(cur):
+def delete_sess_db(cur):
+	"""Drops the sessions table. Do NOT call unless cleaning up testing
+
+	Args:
+	cur		   (SQLite cursor): pointer into sessions DB
+
+	Returns: Void
+	"""
 	cur.execute("DROP TABLE sessions")
+	cur.commit()
+
+def create_song_db(cur):
+	"""Helper function used for setting up the songs DB (for sessions->song
+	mapping lookups) given a cursor into the DB. DB is setup per:
+
+	| Session ID | Song ID (Spotify) | Position |
+
+	Args:
+	cur		   (SQLite cursor): pointer into songs DB
+
+	Returns: Void
+	"""
+	cur.execute("""CREATE TABLE songs
+	   (sessid text, songid text, position real)""")
+	cur.commit()
+
+def delete_song_db(cur):
+	"""Drops the songs table. Do NOT call unless cleaning up testing
+
+	Args:
+	cur		   (SQLite cursor): pointer into songs DB
+
+	Returns: Void
+	"""
+	cur.execute("DROP TABLE songs")
 	cur.commit()
 
 # ========================== Helper Functions =============================== #
@@ -73,12 +126,12 @@ def join_session(cur, session_id, session_name, session_genre,
 	page where all joined rooms are listed
 
 	Args:
-	cur           (SQLite cursor): pointer into sessions DB
-	session_id    (str): randomly generated bop session ID
+	cur		   (SQLite cursor): pointer into sessions DB
+	session_id	(str): randomly generated bop session ID
 	session_name  (str): title given to session
 	session_genre (str): metadata of bop session created
 
-	master_id     (str): ID of master of the session
+	master_id	 (str): ID of master of the session
 	participant_id(str): ID of the joining member
 
 	Returns: Void
@@ -115,7 +168,7 @@ def spotify_authorized():
 @app.route("/bop/", methods=["GET", "POST"])
 def bop():
 	# DB Columns: sessid | sessname | sessgenre | masterid | partid |
-	cur = get_db()
+	cur = get_db(SESS_DB)
 	c   = cur.cursor()
 	
 	# sessions the user is already a part of: do NOT display on "join" list
@@ -159,9 +212,23 @@ def bop():
 							sessions=sessions,
 							create=create, join=join)
 
-@app.route("/room/<sessid>/")
+@app.route("/room/<sessid>/", methods=["GET", "POST"])
 def room(sessid):
-	return render_template("room.html")
+	# | sessid | songid | position
+	cur = get_db(SONG_DB)
+	
+	search = SearchForm()
+	client_credentials_manager = SpotifyClientCredentials()
+	sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+
+	songs = []
+	if search.validate_on_submit():
+		query = search.query.data
+		songs = sp.search(q=query)["tracks"]["items"]
+	
+	return render_template("room.html",
+							search=search,
+							songs=songs)
 
 if __name__ == "__main__":
 	app.run(host="0.0.0.0", debug=True)
