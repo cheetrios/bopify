@@ -6,6 +6,10 @@ __description__ = Main application file for deployment
 
 import uuid
 import sqlite3
+import requests
+import base64
+import urllib
+import json
 
 import spotify
 import spotipy
@@ -21,26 +25,30 @@ from forms import CreateForm, JoinForm, SearchForm
 SESS_DB = "db/sessions.db"
 SONG_DB = "db/song.db"
 
-SPOTIFY_APP_ID	   = "d251ae2dd5824052874019013ee73eb0"
-SPOTIFY_APP_SECRET = "ee5c56305aea428b986c4a0964361cb2"
+#  Client Keys
+CLIENT_ID = "d251ae2dd5824052874019013ee73eb0"
+CLIENT_SECRET = "ee5c56305aea428b986c4a0964361cb2"
+
+# Spotify URLS
+SPOTIFY_AUTH_URL     = "https://accounts.spotify.com/authorize"
+SPOTIFY_TOKEN_URL    = "https://accounts.spotify.com/api/token"
+SPOTIFY_API_BASE_URL = "https://api.spotify.com"
+
+API_VERSION     = "v1"
+SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
+REDIRECT_URI    = "localhost:5000/login/authorized/"
 
 app = Flask(__name__)
 app.config.from_object("config")
 
 oauth = OAuth(app)
 
-spotify_session = spotify.Session()
-audio   = spotify.AlsaSink(spotify_session)
-loop    = spotify.EventLoop(spotify_session)
-loop.start()
-spotify_session.login("kushpa", password="quadsquad")
-
 # ========================== Spotify Authenticate ============================ #
 
-spotify = oauth.remote_app(
+spotify_oauth = oauth.remote_app(
 	"spotify",
-	consumer_key=SPOTIFY_APP_ID,
-	consumer_secret=SPOTIFY_APP_SECRET,
+	consumer_key=CLIENT_ID,
+	consumer_secret=CLIENT_SECRET,
 	# Change the scope to match whatever it us you need
 	# list of scopes can be found in the url below
 	# https://developer.spotify.com/web-api/using-scopes/
@@ -51,7 +59,7 @@ spotify = oauth.remote_app(
 	authorize_url="https://accounts.spotify.com/authorize"
 )
 
-@spotify.tokengetter
+@spotify_oauth.tokengetter
 def get_spotify_oauth_token():
 	return session.get("oauth_token")
 
@@ -157,7 +165,7 @@ def login():
 		next=request.args.get("next") or request.referrer or None,
 		_external=True
 	)
-	return spotify.authorize(callback=callback)
+	return spotify_oauth.authorize(callback=callback)
 
 @app.route("/login/authorized/")
 def spotify_authorized():
@@ -166,12 +174,38 @@ def spotify_authorized():
 	Args:
 	Returns: Redirection to bop sessions listing page
 	"""
-	resp = spotify.authorized_response()
+	resp = spotify_oauth.authorized_response()
+
+	# Requests refresh and access tokens
+	auth_token = request.args['code']
+	code_payload = {
+		"grant_type": "authorization_code",
+		"code": str(auth_token),
+		"redirect_uri": REDIRECT_URI
+	}
+
+	base64encoded = base64.b64encode("{}:{}".format(CLIENT_ID, CLIENT_SECRET))
+	headers = {"Authorization": "Basic {}".format(base64encoded)}
+	post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload, headers=headers)
+
+	# Tokens are Returned to Application
+	response_data = json.loads(post_request.text)
+	print(response_data)
+	access_token  = response_data["access_token"]
+	refresh_token = response_data["refresh_token"]
+	token_type    = response_data["token_type"]
+	expires_in    = response_data["expires_in"]
+
+	# Use the access token to access Spotify API
+	authorization_header = {"Authorization":"Bearer {}".format(access_token)}
+
+	# Get profile data
+	user_profile_api_endpoint = "{}/me".format(SPOTIFY_API_URL)
+	profile_response = requests.get(user_profile_api_endpoint, headers=authorization_header)
+	profile_data = json.loads(profile_response.text)
 
 	# used to confirm that a user has logged in (for finding sessions)
-	session["user_id"] = spotify.consumer_secret
-	print(session["user_id"])
-	print("===================================")
+	session["user_id"] = spotify_oauth.consumer_secret
 	return redirect(url_for("bop"))
 
 @app.route("/bop/", methods=["GET", "POST"])
@@ -265,12 +299,18 @@ def room(sessid):
 		
 	# when the master presses "play"
 	elif request.method == "POST" and "play" in request.form:
-		song = cur.cursor().execute(
+		song = song_cur.cursor().execute(
 		"""SELECT * FROM songs 
 			WHERE sessid=?
 			AND ismaster=1
 			ORDER BY position ASC""", (sessid,)).fetchone()
 		
+		spotify_session = spotify.Session()
+		audio   = spotify.AlsaSink(spotify_session)
+		loop    = spotify.EventLoop(spotify_session)
+		loop.start()
+		spotify_session.login("kushpa", password="quadsquad")
+
 		track = spotify_session.get_track("spotify:track:{}".format(song[1]))
 		track.load()
 		spotify_session.player.load(track)
@@ -279,11 +319,11 @@ def room(sessid):
 	# when the master accepts the proposal and adds the song
 	elif request.method == "POST" and "add" in request.form:
 		song_id = request.form.split(":")[1] # ID passed in through form name
-		cur.cursor().execute(
+		song_cur.cursor().execute(
 		"""UPDATE songs
 			SET ismaster=1,
 	        WHERE songid=?""", (song_id,))
-		cur.commit()
+		song_cur.commit()
 
 	return render_template("room.html",
 							search=search,

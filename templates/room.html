@@ -26,9 +26,11 @@
 			  			<table class="table">
 			  				{% for song in songs %}
 							<tr>
+								{% if song[2] %}
 								<td>{{ song[2] }}</td>
-								{% if is_master and song[2] %}
-								<form name="add:{{ song[2] }}" method="post">
+								{% elif is_master %}
+								<form method="post">
+									<input type="hidden" name="name" value="{{ song[2] }}">
 									<td>
 										<button class="btn btn-lg btn-primary btn-block" type="submit">Add</button>
 									</td>
@@ -39,7 +41,8 @@
 			  			</table>
 
 			  			{% if is_master %}
-							<form name="play" method="post">
+							<form method="post">
+								<input type="hidden" name="play">
 								<button class="btn btn-lg btn-primary btn-block" type="submit">Play</button>
 							</form>
 						{% else %}
