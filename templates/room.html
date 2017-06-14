@@ -32,9 +32,12 @@
 							{% endfor %}
 			  			</table>
 
-			  			<form method = "post">
-				  			<input type="submit" name="submit" value="Sync">
-				  		</form>
+			  			{% if is_master %}
+							<a class="btn btn-default" 
+								href="{{ url_for('play', sessid=sessid) }}">Play</button>
+						{% else %}
+							<a class="btn btn-default">Sync</button>	
+						{% endif %}
 
 				  		<form action="" method="post" name="search">
 					  	  {{ search.hidden_tag() }}
@@ -46,8 +49,18 @@
 							{% for song in queried %}
 							<tr>	
 								<td>{{ song["name"] }}</td>
-								<td><a class="btn btn-default" 
-									href="{{ url_for('queue', sessid=sessid, songid=song['id'], songname=song['name']) }}">Queue</button>
+								<td>
+									{% if is_master %}
+										<a class="btn btn-default" 
+											href="{{ url_for('queue', sessid=sessid, songid=song['id'], songname=song['name']) }}">
+											Queue
+										</a>
+									{% else %}
+										<a class="btn btn-default" 
+											href="{{ url_for('propose', sessid=sessid, songid=song['id'], songname=song['name']) }}">
+											Propose
+										</a>
+									{% endif %}
 								</td>
 							</tr>
 							{% endfor %}

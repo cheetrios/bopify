@@ -7,6 +7,7 @@ __description__ = Main application file for deployment
 import uuid
 import sqlite3
 
+import spotify
 import spotipy
 import spotipy.util as util
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -27,6 +28,12 @@ app = Flask(__name__)
 app.config.from_object("config")
 
 oauth = OAuth(app)
+
+session = spotify.Session()
+audio   = spotify.AlsaSink(session)
+loop    = spotify.EventLoop(session)
+loop.start()
+session.login("kushpa", password="quadsquad")
 
 # ========================== Spotify Authenticate ============================ #
 
@@ -129,11 +136,21 @@ def join_session(cur, session_id, session_name, session_genre,
 
 @app.route("/")
 def index():
-	return redirect(url_for("login"))
-	#return render_template("index.html")
+	"""Login/Spotify authentication page
 
+	Args:
+	Returns: View for login page (should redirect to Spotify OAuth)
+	"""
+	return redirect(url_for("login"))
+	
 @app.route("/login/")
 def login():
+	"""Login/Spotify authentication helper function for calling OAuth
+	with proper callback URI
+
+	Args:
+	Returns: Authorization request with callback to the bop page
+	"""
 	callback = url_for(
 		"spotify_authorized",
 		next=request.args.get("next") or request.referrer or None,
@@ -143,6 +160,11 @@ def login():
 
 @app.route("/login/authorized/")
 def spotify_authorized():
+	"""Logs user in and saves information (ID) into session for DB access
+
+	Args:
+	Returns: Redirection to bop sessions listing page
+	"""
 	resp = spotify.authorized_response()
 
 	# used to confirm that a user has logged in (for finding sessions)
@@ -151,6 +173,15 @@ def spotify_authorized():
 
 @app.route("/bop/", methods=["GET", "POST"])
 def bop():
+	"""Main sessions page where session can be created or joined. Post requests
+	can be one of two: create or join, where the first makes new session and
+	makes current user the master and the second adding the user as a member.
+
+	Args:
+	Returns: Redirection to the particular room page if a new room was created or
+	a repopulated version of the sessions landing page
+	"""
+
 	# DB Columns: sessid | sessname | sessgenre | masterid | partid |
 	cur = sqlite3.connect(SESS_DB)
 	c   = cur.cursor()
@@ -198,6 +229,14 @@ def bop():
 
 @app.route("/room/<sessid>/", methods=["GET", "POST"])
 def room(sessid):
+	"""Page associated to a particular bop session, showing songs in the room.
+	Post requests correspond to when a request to add a song has been made
+
+	Args:
+	sessid (str): bop session ID room corresponds to (from DB)
+	
+	Returns: Bop session room page
+	"""
 	# determines whether or not current user is master
 	sess_cur = sqlite3.connect(SESS_DB) # | sessid | sessname | sessgenre | masterid | partid |
 	reference = sess_cur.cursor().execute(
@@ -217,6 +256,13 @@ def room(sessid):
 		query = search.query.data
 		queried = sp.search(q=query)["tracks"]["items"]
 		
+	# when the master presses "play"
+	elif request.method == 'GET':
+		track = session.get_track("spotify:track:{}".format(songid))
+		track.load()
+		session.player.load(track)
+		session.player.play()
+
 	return render_template("room.html",
 							search=search,
 							is_master=is_master,
@@ -224,11 +270,44 @@ def room(sessid):
 							songs=songs,
 							queried=queried)
 
+@app.route("/room/<sessid>/<songid>/")
+def play(sessid, songid):
+	"""Plays the specified song in the room, i.e. to all the accounts the users
+	are logged in to.
+
+	Args:
+	sessid (str): bop session ID room corresponds to (from sessions DB)
+	songid (str): song ID to be played (from songs DB)
+
+	Returns: Redirection to the bop session page
+	"""
+	# gets the song in the cue with lowest "order"
+	song = cur.cursor().execute(
+		"""SELECT * FROM songs 
+		WHERE sessid=? 
+		ORDER BY position ASC""", (sessid,)).fetchone()
+	
+	track = session.get_track("spotify:track:{}".format(song[1]))
+	track.load()
+	session.player.load(track)
+	session.player.play()
+
 @app.route("/room/<sessid>/<songid>/<songname>/")
 def queue(sessid, songid, songname):
+	"""Reqeusts particular song to be added to the session queue
+
+	Args:
+	sessid (str): bop session ID room corresponds to (from sessions DB)
+	songid (str): song ID to be played (from songs DB)
+	songname (str): name of song to be played
+
+	Returns: Redirection to the bop session page
+	"""
 	cur = sqlite3.connect(SONG_DB)
+	songs = cur.cursor().execute(
+		"""SELECT * FROM songs WHERE sessid=?""", (sessid,)).fetchall()
 	cur.cursor().execute("INSERT INTO songs VALUES (?,?,?,?)", 
-		[sessid, songid, songname, 0])
+		[sessid, songid, songname, len(songs) + 1])
 	cur.commit()
 	return redirect(url_for("room", sessid=sessid))
 
