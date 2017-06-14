@@ -11,7 +11,6 @@ import base64
 import urllib
 import json
 
-import spotify
 import spotipy
 import spotipy.util as util
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -270,7 +269,7 @@ def room(sessid):
 			WHERE sessid=?
 			AND ismaster=1
 			ORDER BY position ASC""", (sessid,)).fetchone()
-		
+
 	# when the master accepts the proposal and adds the song
 	elif request.method == "POST" and "add" in request.form:
 		song_id = request.form.split(":")[1] # ID passed in through form name
