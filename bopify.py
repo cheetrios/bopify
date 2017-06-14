@@ -14,7 +14,6 @@ import json
 import spotify
 import spotipy
 import spotipy.util as util
-from spotipy.oauth2 import SpotifyClientCredentials
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_oauthlib.client import OAuth, OAuthException
@@ -26,7 +25,7 @@ SESS_DB = "db/sessions.db"
 SONG_DB = "db/song.db"
 
 #  Client Keys
-CLIENT_ID = "d251ae2dd5824052874019013ee73eb0"
+CLIENT_ID     = "d251ae2dd5824052874019013ee73eb0"
 CLIENT_SECRET = "ee5c56305aea428b986c4a0964361cb2"
 
 # Spotify URLS
@@ -36,32 +35,13 @@ SPOTIFY_API_BASE_URL = "https://api.spotify.com"
 
 API_VERSION     = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
-REDIRECT_URI    = "localhost:5000/login/authorized/"
+REDIRECT_URI    = "http://localhost:5000/login/authorized/"
+SCOPE           = "playlist-modify-public playlist-modify-private"
 
 app = Flask(__name__)
 app.config.from_object("config")
 
 oauth = OAuth(app)
-
-# ========================== Spotify Authenticate ============================ #
-
-spotify_oauth = oauth.remote_app(
-	"spotify",
-	consumer_key=CLIENT_ID,
-	consumer_secret=CLIENT_SECRET,
-	# Change the scope to match whatever it us you need
-	# list of scopes can be found in the url below
-	# https://developer.spotify.com/web-api/using-scopes/
-	request_token_params={"scope": "user-read-email"},
-	base_url="https://accounts.spotify.com",
-	request_token_url=None,
-	access_token_url="/api/token",
-	authorize_url="https://accounts.spotify.com/authorize"
-)
-
-@spotify_oauth.tokengetter
-def get_spotify_oauth_token():
-	return session.get("oauth_token")
 
 # ========================== DB Setup Functions ============================= #
 def create_sess_db(cur):
@@ -143,29 +123,19 @@ def join_session(cur, session_id, session_name, session_genre,
 
 # ========================== Flask Route Setup ============================== #
 
+auth_query_parameters = {
+    "response_type": "code",
+    "redirect_uri": REDIRECT_URI,
+    "scope": SCOPE,
+    "client_id": CLIENT_ID
+}
+
 @app.route("/")
 def index():
-	"""Login/Spotify authentication page
-
-	Args:
-	Returns: View for login page (should redirect to Spotify OAuth)
-	"""
-	return redirect(url_for("login"))
-	
-@app.route("/login/")
-def login():
-	"""Login/Spotify authentication helper function for calling OAuth
-	with proper callback URI
-
-	Args:
-	Returns: Authorization request with callback to the bop page
-	"""
-	callback = url_for(
-		"spotify_authorized",
-		next=request.args.get("next") or request.referrer or None,
-		_external=True
-	)
-	return spotify_oauth.authorize(callback=callback)
+    # Auth Step 1: Authorization
+    url_args = "&".join(["{}={}".format(key,urllib.quote(val)) for key,val in auth_query_parameters.iteritems()])
+    auth_url = "{}/?{}".format(SPOTIFY_AUTH_URL, url_args)
+    return redirect(auth_url)
 
 @app.route("/login/authorized/")
 def spotify_authorized():
@@ -174,8 +144,6 @@ def spotify_authorized():
 	Args:
 	Returns: Redirection to bop sessions listing page
 	"""
-	resp = spotify_oauth.authorized_response()
-
 	# Requests refresh and access tokens
 	auth_token = request.args['code']
 	code_payload = {
@@ -185,12 +153,11 @@ def spotify_authorized():
 	}
 
 	base64encoded = base64.b64encode("{}:{}".format(CLIENT_ID, CLIENT_SECRET))
-	headers = {"Authorization": "Basic {}".format(base64encoded)}
-	post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload, headers=headers)
+	headers       = {"Authorization": "Basic {}".format(base64encoded)}
+	post_request  = requests.post(SPOTIFY_TOKEN_URL, data=code_payload, headers=headers)
 
 	# Tokens are Returned to Application
 	response_data = json.loads(post_request.text)
-	print(response_data)
 	access_token  = response_data["access_token"]
 	refresh_token = response_data["refresh_token"]
 	token_type    = response_data["token_type"]
@@ -205,7 +172,7 @@ def spotify_authorized():
 	profile_data = json.loads(profile_response.text)
 
 	# used to confirm that a user has logged in (for finding sessions)
-	session["user_id"] = spotify_oauth.consumer_secret
+	session["user_id"] = profile_data["id"]
 	return redirect(url_for("bop"))
 
 @app.route("/bop/", methods=["GET", "POST"])
@@ -218,13 +185,10 @@ def bop():
 	Returns: Redirection to the particular room page if a new room was created or
 	a repopulated version of the sessions landing page
 	"""
-	from flask import session 
-
 	# DB Columns: sessid | sessname | sessgenre | masterid | partid |
 	cur = sqlite3.connect(SESS_DB)
 	c   = cur.cursor()
 	
-	print(session["user_id"])
 	# sessions the user is already a part of: do NOT display on "join" list
 	sessions = c.execute("""SELECT * FROM sessions WHERE partid=?""",
 		(session["user_id"],)).fetchall()
