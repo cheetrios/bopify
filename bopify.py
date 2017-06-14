@@ -271,17 +271,6 @@ def room(sessid):
 			AND ismaster=1
 			ORDER BY position ASC""", (sessid,)).fetchone()
 		
-		spotify_session = spotify.Session()
-		audio   = spotify.AlsaSink(spotify_session)
-		loop    = spotify.EventLoop(spotify_session)
-		loop.start()
-		spotify_session.login("kushpa", password="quadsquad")
-
-		track = spotify_session.get_track("spotify:track:{}".format(song[1]))
-		track.load()
-		spotify_session.player.load(track)
-		spotify_session.player.play()
-
 	# when the master accepts the proposal and adds the song
 	elif request.method == "POST" and "add" in request.form:
 		song_id = request.form.split(":")[1] # ID passed in through form name
