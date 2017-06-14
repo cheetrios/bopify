@@ -24,17 +24,24 @@
 		  			<div class="bottom-text">
 			  			<h1> Session songs. </h1>
 			  			<table class="table">
-							{% for song in songs %}
+			  				{% for song in songs %}
 							<tr>
 								<td>{{ song[2] }}</td>
-								<td>{{ song[1] }}</td>
+								{% if is_master and song[2] %}
+								<form name="add:{{ song[2] }}" method="post">
+									<td>
+										<button class="btn btn-lg btn-primary btn-block" type="submit">Add</button>
+									</td>
+								</form>
+								{% endif %}
 							</tr>
 							{% endfor %}
 			  			</table>
 
 			  			{% if is_master %}
-							<a class="btn btn-default" 
-								href="{{ url_for('play', sessid=sessid) }}">Play</button>
+							<form name="play" method="post">
+								<button class="btn btn-lg btn-primary btn-block" type="submit">Play</button>
+							</form>
 						{% else %}
 							<a class="btn btn-default">Sync</button>	
 						{% endif %}
@@ -47,20 +54,15 @@
 
 						<table class="table">
 							{% for song in queried %}
-							<tr>	
+							<tr>
 								<td>{{ song["name"] }}</td>
 								<td>
-									{% if is_master %}
-										<a class="btn btn-default" 
-											href="{{ url_for('queue', sessid=sessid, songid=song['id'], songname=song['name']) }}">
-											Queue
-										</a>
-									{% else %}
-										<a class="btn btn-default" 
-											href="{{ url_for('propose', sessid=sessid, songid=song['id'], songname=song['name']) }}">
-											Propose
-										</a>
+									<a class="btn btn-default" href="{{ url_for('queue', sessid=sessid, 
+										songid=song['id'], songname=song['name'], ismaster=is_master) }}">
+									{% if is_master %} Queue
+									{% else %} Propose
 									{% endif %}
+									</a>
 								</td>
 							</tr>
 							{% endfor %}
