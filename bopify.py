@@ -14,8 +14,10 @@ import json
 import spotify
 import spotipy
 import spotipy.util as util
+from spotipy.oauth2 import SpotifyClientCredentials
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for
+from flask import session as flask_session
 from flask_oauthlib.client import OAuth, OAuthException
 from flask import g
 
@@ -172,7 +174,7 @@ def spotify_authorized():
 	profile_data = json.loads(profile_response.text)
 
 	# used to confirm that a user has logged in (for finding sessions)
-	session["user_id"] = profile_data["id"]
+	flask_session["user_id"] = profile_data["id"]
 	return redirect(url_for("bop"))
 
 @app.route("/bop/", methods=["GET", "POST"])
@@ -191,7 +193,7 @@ def bop():
 	
 	# sessions the user is already a part of: do NOT display on "join" list
 	sessions = c.execute("""SELECT * FROM sessions WHERE partid=?""",
-		(session["user_id"],)).fetchall()
+		(flask_session["user_id"],)).fetchall()
 	session_ids = [session[0] for session in sessions]
 
 	full = c.execute("""SELECT * FROM sessions""").fetchall()
@@ -209,8 +211,8 @@ def bop():
 					session_id=session_id, 
 					session_name=create.session.data, 
 					session_genre=create.genre.data, 
-					master_id=session["user_id"], 
-					participant_id=session["user_id"])
+					master_id=flask_session["user_id"], 
+					participant_id=flask_session["user_id"])
 		return redirect(url_for("room", sessid=session_id))
 
 	elif join.validate_on_submit():
@@ -221,7 +223,7 @@ def bop():
 					session_name=reference[1], 
 					session_genre=reference[2], 
 					master_id=reference[3], 
-					participant_id=session["user_id"])
+					participant_id=flask_session["user_id"])
 		return redirect("/bop/")
 
 	# case of hitting the page after logging in (did not click create)
@@ -244,7 +246,7 @@ def room(sessid):
 	sess_cur = sqlite3.connect(SESS_DB) # | sessid | sessname | sessgenre | masterid | partid |
 	reference = sess_cur.cursor().execute(
 		"""SELECT * FROM sessions WHERE sessid=?""", (sessid,)).fetchone()
-	is_master = (reference is None or reference[3] == session["user_id"]) 
+	is_master = (reference is None or reference[3] == flask_session["user_id"]) 
 	
 	song_cur = sqlite3.connect(SONG_DB) # | sessid | songid | songname | position | ismaster
 	songs = song_cur.cursor().execute(
